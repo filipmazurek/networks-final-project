@@ -8,6 +8,8 @@ import java.util.concurrent.ThreadLocalRandom;
 /* NOTES
  * mConfig is the RaftConfig object available here. It contains not only all general configuration
  *     but also all specific server details - like the the current term.
+ * Timers must be cancelled! The provided convenience function spawns a new timer, which is a new
+ *     thread. As a result, timers must be cancelled to shut down the thread
  */
 
 public class FollowerMode extends RaftMode {
@@ -32,10 +34,11 @@ public class FollowerMode extends RaftMode {
   }
 
   private void startTimer() {
-     timer = super.scheduleTimer(getTimeout(), HB_TIMEOUT_ID);
+     timer = scheduleTimer(getTimeout(), HB_TIMEOUT_ID);
   }
 
   private void grantVote(int candidateTerm, int candidateID) {
+    // Restart the timer to not time out
     timer.cancel();
     startTimer();
     // Update own term and set voted for the candidate
@@ -137,6 +140,7 @@ public class FollowerMode extends RaftMode {
       switch (timerID){
         // For timeouts, make this server go into Candidate mode
         case HB_TIMEOUT_ID:
+          timer.cancel();
           RaftServerImpl.setMode(new CandidateMode());
           break;
         default:

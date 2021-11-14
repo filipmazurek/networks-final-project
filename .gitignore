@@ -1,3 +1,9 @@
+# Serverlogs
+p3/serverlogs/
+
+# All compiled files
+p3/bin/
+
 # JetBrains
 .idea
 

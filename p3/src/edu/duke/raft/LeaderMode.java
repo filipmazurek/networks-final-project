@@ -5,14 +5,26 @@ import java.util.Timer;
 public class LeaderMode extends RaftMode {
   // How often to send hearbeat messages?
   private static final int HB_INTERVAL = 50;
-  private static final int HB_ID = 4;
+  private static final int HB_ID = 3;
 
   private Timer hbTimer;
+
+  private void sendHeartBeat() {
+    for(int i = 1; i <= mConfig.getNumServers(); i++) {
+      if(i == mID) {
+        continue;
+      }
+      remoteAppendEntries(i, mConfig.getCurrentTerm(), mID, mLog.getLastIndex(),
+          mLog.getLastTerm(), new Entry[0], mCommitIndex);
+    }
+  }
 
   public void go() {
     synchronized (mLock) {
       System.out.println("S" + mID + "." + mConfig.getCurrentTerm() + ": switched to leader mode.");
 
+      // Immediately send out the heartbeat to stop other elections (and others incrementing their term)
+      sendHeartBeat();
       // Initialize the heartbeat timer
       hbTimer = scheduleTimer(HB_INTERVAL, HB_ID);
     }
@@ -38,7 +50,6 @@ public class LeaderMode extends RaftMode {
         mConfig.setCurrentTerm(candidateTerm, 0);
         RaftServerImpl.setMode(new FollowerMode());
         // TODO: same checking as in candidate mode
-        System.out.println("DOES THIS EXECUTE? LEADER -> FOLLOWER");
       }
 
       return vote;
@@ -82,14 +93,14 @@ public class LeaderMode extends RaftMode {
     synchronized (mLock) {
       switch (timerID) {
         case HB_ID:
+          hbTimer.cancel();
           // Send heartbeats to all servers
-          for(int i = 1; i <= mConfig.getNumServers(); i++) {
-            if(i == mID) {
-              continue;
-            }
-            remoteAppendEntries(i, mConfig.getCurrentTerm(), mID, mLog.getLastIndex(),
-                mLog.getLastTerm(), new Entry[0], mCommitIndex);
-          }
+          sendHeartBeat();
+          hbTimer = scheduleTimer(HB_INTERVAL, HB_ID);
+          break;
+        default:
+          throw new RuntimeException("Unexpected timer id: " + timerID);
+
       }
     }
   }

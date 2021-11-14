@@ -9,10 +9,10 @@ import java.util.concurrent.ThreadLocalRandom;
 
 public class CandidateMode extends RaftMode {
   // ID for timer
-  private static final int ELECTION_ID = 0;
+  private static final int ELECTION_ID = 1;
   // Polling values
-  private static final int POLL_TIMEOUT = 10;
-  private static final int POLL_ID = 1;
+  private static final int POLL_TIMEOUT = 5;
+  private static final int POLL_ID = 2;
 
   // Have two timers. One to poll election results, the other to check election timeout
   private Timer electionTimer;
@@ -45,11 +45,12 @@ public class CandidateMode extends RaftMode {
       mConfig.setCurrentTerm(++term, mID);
       System.out.println("S" + mID + "." + term + ": switched to candidate mode.");
 
+      // TODO: Do not re-initialize the object. First check if there is already an election happening
+      //   If there is an election, then only send out requests for votes.
       // Initialize the Responses object
       RaftResponses.init(mConfig.getNumServers(), term);
-      // Immediately set vote for self. The "initial" round is -1
 
-      // TODO: Check that this actually correctly sets the vote
+      // Immediately set vote for self. The "initial" round is -1
       RaftResponses.setVote(mID, 0, term, -1);
 
       // Servers are 1-indexed
@@ -90,11 +91,10 @@ public class CandidateMode extends RaftMode {
         // Set that voted for the candidate
         mConfig.setCurrentTerm(candidateTerm, candidateID);
         // Step down to be a follower
-        RaftServerImpl.setMode(new FollowerMode());  // TODO: Does this let the function return?
-        System.out.println("DOES THIS CODE EXECUTE?");
-        // Vote for the requesting candidate
-        // TODO: Should the candidate vote? Should check the log first?
-        return 0;
+        RaftServerImpl.setMode(new FollowerMode());
+        // TODO: Should the candidate vote for this one?
+        //    Check the log first
+        return term;
       }
 
 
@@ -137,17 +137,35 @@ public class CandidateMode extends RaftMode {
   // @param id of the timer that timed out
   public void handleTimeout(int timerID) {
     synchronized (mLock) {
+      // Both cases will require taking out the pollingTimer
+      pollingTimer.cancel();
       switch (timerID) {
+        // The election timed out. Increment term and try again
         case ELECTION_ID:
+          electionTimer.cancel();
+          this.go();
           break;
 
         case POLL_ID:
           // Read through all responses.
           int[] votes = RaftResponses.getVotes(mConfig.getCurrentTerm());
+
+          if (votes == null) {
+            // Something else started a RaftResponse - and with a higher term
+            // Step down as candidate instead
+            // FIXME: do something more thorough about it in the first place
+            electionTimer.cancel();
+            // Update own term
+            mConfig.setCurrentTerm(RaftResponses.mTerm, 0);
+            RaftServerImpl.setMode(new FollowerMode());
+            return;
+          }
+
           // Keep track of voters for this candidate
           int numChosen = 0;
 
-          for(int vote : votes) {
+          for(int i = 1; i < votes.length; i++) {
+            int vote = votes[i];
             if (vote == 0){
               numChosen++;
             }
@@ -158,6 +176,7 @@ public class CandidateMode extends RaftMode {
               mConfig.setCurrentTerm(vote, 0);
               RaftServerImpl.setMode(new FollowerMode());
             }
+            // TODO: stop election if another server got the majority in this term
             // If the majority of servers voted for this candidate, become leader
             if(numChosen > ((float)mConfig.getNumServers() / 2)) {
               electionTimer.cancel();
@@ -165,7 +184,7 @@ public class CandidateMode extends RaftMode {
             }
             // Otherwise, reset the poll timer again
             else {
-              scheduleTimer(POLL_TIMEOUT, POLL_ID);
+              pollingTimer = scheduleTimer(POLL_TIMEOUT, POLL_ID);
             }
           }
           break;
