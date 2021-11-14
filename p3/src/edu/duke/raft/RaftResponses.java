@@ -12,10 +12,10 @@ package edu.duke.raft;
 
 public class RaftResponses {
 
-  private static int[] mAppendResponses;
-  private static int mTerm;
-  private static int[] mVotes;
-  private static int[] mRounds;
+  public static int[] mAppendResponses;
+  public static int mTerm;
+  public static int[] mVotes;
+  public static int[] mRounds;
 
   // @param size of the network
   // @param current term

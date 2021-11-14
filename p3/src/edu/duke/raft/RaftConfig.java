@@ -45,7 +45,8 @@ public class RaftConfig {
 	    mNumServers = Integer.parseInt (value);
 	  } else if (field.equals (ELECTION_TIMEOUT_OVERRIDE)) {
 	    mTimeoutOverride = Integer.parseInt (value);
-	  } else {
+      System.out.println("USING TIMEOUT OVERRIDE of " + mTimeoutOverride + " FOR SERVER " + file);
+    } else {
 	  System.out.println ("Error parsing " + 
 			      file + 
 			      "." + 
