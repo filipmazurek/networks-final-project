@@ -46,10 +46,21 @@ public class LeaderMode extends RaftMode {
 
       if (candidateTerm > term) {
         hbTimer.cancel();
-        // Update own term to stay up to date.
-        mConfig.setCurrentTerm(candidateTerm, 0);
+        // Step down to become a follower
         RaftServerImpl.setMode(new FollowerMode());
-        // TODO: same checking as in candidate mode
+
+        boolean ownLogIsMoreComplete = (mLog.getLastTerm() > lastLogTerm) || ((mLog.getLastTerm() == lastLogTerm) && (mLog.getLastIndex() > lastLogIndex));
+
+        if(!ownLogIsMoreComplete) {
+          // Set that voted for the candidate
+          mConfig.setCurrentTerm(candidateTerm, candidateID);
+          return 0;
+        }
+        else {
+          // Did not vote for the candidate
+          mConfig.setCurrentTerm(candidateTerm, 0);
+          return term;
+        }
       }
 
       return vote;
@@ -76,15 +87,15 @@ public class LeaderMode extends RaftMode {
 
       if (leaderTerm > term) {
         hbTimer.cancel();
+
+        RaftServerImpl.setMode(new FollowerMode());
+
         // Update own term to stay up to date.
         mConfig.setCurrentTerm(leaderTerm, 0);
-        RaftServerImpl.setMode(new FollowerMode());
-        // TODO: same checking as in candidate mode
-        System.out.println("DOES THIS EXECUTE? LEADER -> FOLLOWER");
+
       }
 
-      int result = term;
-      return result;
+      return term;
     }
   }
 

@@ -120,13 +120,20 @@ public class FollowerMode extends RaftMode {
 			    Entry[] entries,
 			    int leaderCommit) {
     synchronized (mLock) {
-      // FIXME: currently will accept all entries and restart own timer. Implement Raft
+      // FIXME: currently will accept all entries and restart own timer. Implement appending
       timer.cancel();
       startTimer();
 
       int term = mConfig.getCurrentTerm ();
       int result = term;
-      return result;
+
+      // Update own term to match the leader. Didn't vote for anyone
+      if (leaderTerm > term) {
+        mConfig.setCurrentTerm(leaderTerm, 0);
+        return 0;
+      }
+
+      return 0;
     }
   }
 
