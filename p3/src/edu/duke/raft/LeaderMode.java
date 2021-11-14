@@ -1,10 +1,20 @@
 package edu.duke.raft;
 
+import java.util.Timer;
+
 public class LeaderMode extends RaftMode {
+  // How often to send hearbeat messages?
+  private static final int HB_INTERVAL = 50;
+  private static final int HB_ID = 4;
+
+  private Timer hbTimer;
+
   public void go() {
     synchronized (mLock) {
-      int term = 0;
-      System.out.println("S" + mID + "." + term + ": switched to leader mode.");
+      System.out.println("S" + mID + "." + mConfig.getCurrentTerm() + ": switched to leader mode.");
+
+      // Initialize the heartbeat timer
+      hbTimer = scheduleTimer(HB_INTERVAL, HB_ID);
     }
   }
 
@@ -21,6 +31,16 @@ public class LeaderMode extends RaftMode {
     synchronized (mLock) {
       int term = mConfig.getCurrentTerm();
       int vote = term;
+
+      if (candidateTerm > term) {
+        hbTimer.cancel();
+        // Update own term to stay up to date.
+        mConfig.setCurrentTerm(candidateTerm, 0);
+        RaftServerImpl.setMode(new FollowerMode());
+        // TODO: same checking as in candidate mode
+        System.out.println("DOES THIS EXECUTE? LEADER -> FOLLOWER");
+      }
+
       return vote;
     }
   }
@@ -42,6 +62,16 @@ public class LeaderMode extends RaftMode {
                            int leaderCommit) {
     synchronized (mLock) {
       int term = mConfig.getCurrentTerm();
+
+      if (leaderTerm > term) {
+        hbTimer.cancel();
+        // Update own term to stay up to date.
+        mConfig.setCurrentTerm(leaderTerm, 0);
+        RaftServerImpl.setMode(new FollowerMode());
+        // TODO: same checking as in candidate mode
+        System.out.println("DOES THIS EXECUTE? LEADER -> FOLLOWER");
+      }
+
       int result = term;
       return result;
     }
@@ -50,6 +80,17 @@ public class LeaderMode extends RaftMode {
   // @param id of the timer that timed out
   public void handleTimeout(int timerID) {
     synchronized (mLock) {
+      switch (timerID) {
+        case HB_ID:
+          // Send heartbeats to all servers
+          for(int i = 1; i <= mConfig.getNumServers(); i++) {
+            if(i == mID) {
+              continue;
+            }
+            remoteAppendEntries(i, mConfig.getCurrentTerm(), mID, mLog.getLastIndex(),
+                mLog.getLastTerm(), new Entry[0], mCommitIndex);
+          }
+      }
     }
   }
 }

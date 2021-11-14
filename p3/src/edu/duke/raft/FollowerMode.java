@@ -46,8 +46,7 @@ public class FollowerMode extends RaftMode {
    */
   public void go () {
     synchronized (mLock) {
-      int term = 0;
-      System.out.println ("S" + mID + "." + term + ": switched to follower mode.");
+      System.out.println ("S" + mID + "." + mConfig.getCurrentTerm() + ": switched to follower mode.");
       startTimer();  // Starts the heartbeat timeout timer
     }
   }
