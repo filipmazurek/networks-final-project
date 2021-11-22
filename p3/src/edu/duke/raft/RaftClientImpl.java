@@ -7,7 +7,6 @@ import java.net.MalformedURLException;
 
 public class RaftClientImpl extends UnicastRemoteObject {
     private int mID;
-    private int port;
     private int counter;
 
     public RaftClientImpl(int clientID) throws RemoteException {
@@ -40,7 +39,7 @@ public class RaftClientImpl extends UnicastRemoteObject {
         })).start();
     }
 
-    
+
 
 
 }
