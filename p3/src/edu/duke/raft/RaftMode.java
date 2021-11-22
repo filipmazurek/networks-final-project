@@ -122,47 +122,47 @@ public abstract class RaftMode {
     }
     
     (new Thread (new Runnable () {	
-	private int mRound = round;
-	public void run () {
-	  String url = getRmiUrl (serverID);
-	  int[] rounds = null;
-	  try {
-	    RaftServer server = (RaftServer) Naming.lookup(url);
-	    int response = server.requestVote (candidateTerm,
-					       candidateID,
-					       lastLogIndex,
-					       lastLogTerm);
-	    synchronized (RaftMode.mLock) {	      
-	      if (!RaftResponses.setVote (serverID, 
-					  response, 
-					  candidateTerm,
-					  mRound)) {
-		System.err.println ("RaftResponses.setVote(" + 
-				    "serverID " + serverID + ", " + 
-				    "response " + response + ", " + 
-				    "candidateTerm " + candidateTerm + ", " +
-				    "candidateRound " + mRound + 
-				    ") failed.");
-	      }
-	    }
-	  } catch (MalformedURLException me) {
-	    printFailedRPC (candidateID, 
-			    serverID, 
-			    candidateTerm, 
-			    "requestVote");
-	  } catch (RemoteException re) {
-	    printFailedRPC (candidateID, 
-			    serverID, 
-			    candidateTerm, 
-			    "requestVote");
-	  } catch (NotBoundException nbe) {
-	    printFailedRPC (candidateID, 
-			    serverID, 
-			    candidateTerm, 
-			    "requestVote");
-	  }
-	}
-      })).start();
+		private int mRound = round;
+		public void run () {
+	  		String url = getRmiUrl (serverID);
+	  		int[] rounds = null;
+			try {
+				RaftServer server = (RaftServer) Naming.lookup(url);
+				int response = server.requestVote (candidateTerm,
+									candidateID,
+									lastLogIndex,
+									lastLogTerm);
+				synchronized (RaftMode.mLock) {	      
+					if (!RaftResponses.setVote (serverID, 
+							response, 
+							candidateTerm,
+							mRound)) {
+						System.err.println ("RaftResponses.setVote(" + 
+							"serverID " + serverID + ", " + 
+							"response " + response + ", " + 
+							"candidateTerm " + candidateTerm + ", " +
+							"candidateRound " + mRound + 
+							") failed.");
+					}
+				}
+			} catch (MalformedURLException me) {
+				printFailedRPC (candidateID, 
+					serverID, 
+					candidateTerm, 
+					"requestVote");
+			} catch (RemoteException re) {
+				printFailedRPC (candidateID, 
+					serverID, 
+					candidateTerm, 
+					"requestVote");
+			} catch (NotBoundException nbe) {
+				printFailedRPC (candidateID, 
+					serverID, 
+					candidateTerm, 
+					"requestVote");
+			}
+		}
+    })).start();
       
   }
   
