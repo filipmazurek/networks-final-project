@@ -15,6 +15,7 @@ import java.nio.file.StandardOpenOption;
 import java.util.List;
 
 public class StartClient {
+
   public static void main (String[] args) {
         if (args.length != 2) {
       System.out.println ("usage: java edu.duke.raft.StartClient -Djava.rmi.server.codebase=<codebase url> <int: server id> <string: operation path>");
@@ -29,23 +30,38 @@ public class StartClient {
     System.out.println ("Contacting server via rmiregistry " + url);
 
     RaftClientImpl client = new RaftClientImpl(id);
-    /*
-    might also replace it with .sh functions? 
-     */
-    // try {
-    //   System.out.println("Client " + id + " reading operations from path " + ops);
-    //   List<String> lines = Files.readAllLines(ops, StandardCharsets.US_ASCII);
-    //   for (String line: lines) {
-    //     /*
-    //     Line := <Operation>:<ArgList>
-    //     Operation := {SLEEP, }
-    //      */
-    //     String[] tokens = line.split(":");
-    //     if ((tokens != null) && tokens.length == 2) {
-    //       String operation = tokens[0];
-    //       String value = tokens[1];
-    //     }
-    //   }
-    // }
+
+    try {
+      System.out.println("Client " + id + " reading operations from path " + ops);
+      List<String> lines = Files.readAllLines(ops, StandardCharsets.US_ASCII);
+      for (String line: lines) {
+        /*
+        Line := <Operation>:<ArgList>
+        Operation := {SLEEP, SEND}
+        ArgList := {<SleepArg>, <SendArg>}
+        SleepArg := <int>
+        SendArg := <int: serverID>,<int: port>
+         */
+        String[] tokens = line.split(":");
+        if ((tokens != null) && tokens.length == 2) {
+          String operation = tokens[0];
+          String value = tokens[1];
+          switch(operation) {
+            case "SLEEP":
+              Thread.sleep(Integer.parseInt(value));
+              break;
+            case "SEND":
+              String[] arguments = value.split(",");
+              client.writeEntry(Integer.parseInt(arguments[0]), Integer.parseInt(arguments[1]));
+              break
+            default: 
+              throw new RuntimeException("Unexpected operation " + operation);
+          }
+        }
+      }
+    } catch (Exception e) {
+      System.out.println(e);
+      throw e;
+    }
   }
 }
