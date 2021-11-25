@@ -4,6 +4,7 @@ package edu.duke.raft;
 import java.util.Timer;
 // Random for setting random timeouts
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.Arrays;
 
 /* NOTES
  * mConfig is the RaftConfig object available here. It contains not only all general configuration
@@ -120,18 +121,53 @@ public class FollowerMode extends RaftMode {
 			    Entry[] entries,
 			    int leaderCommit) {
     synchronized (mLock) {
-      // FIXME: currently will accept all entries and restart own timer. Implement appending
       timer.cancel();
       startTimer();
-
       int term = mConfig.getCurrentTerm ();
       int result = term;
 
       // Update own term to match the leader. Didn't vote for anyone
       if (leaderTerm > term) {
         mConfig.setCurrentTerm(leaderTerm, 0);
-        return 0;
       }
+      // FIXME: currently will accept all entries and restart own timer. Implement appending
+      int currentTerm = mConfig.getCurrentTerm();
+      // reply false if leaderTerm < currentTerm
+      //return currentTerm
+      if(leaderTerm<currentTerm){
+        return currentTerm;
+      }
+      //reply false if mLog's term at prevLogIndex not matches the prevLogTerm
+      //return current term
+      if(mLog.getEntry(prevLogIndex)==null || prevLogTerm!=mLog.getEntry(prevLogIndex).term){
+        return currentTerm;
+      }
+      //delete and append
+      for(int i=0;i<entries.length;i++){
+        //if mLog is empty from the index leader wants to append entries
+        //append directly 
+        if(mLog.getLastIndex()==prevLogIndex+i){
+          //append
+          mLog.append(Arrays.copyOfRange(entries, i, entries.length + 1));
+          break;
+        //if there is a conflict of terms 
+        }else if(entries[i].term!=mLog.getEntry(prevLogIndex+1+i).term){
+          // while(mLog.getLastIndex()>prevLogIndex+i){
+          Entry[] emptyArr = {};
+          mLog.insert(emptyArr,prevLogIndex+1+i,prevLogTerm);
+
+          mLog.append(Arrays.copyOfRange(entries, i, entries.length + 1));
+          break;
+        }
+      }
+      //update the mCommitIndex
+      // By comparing last new log index and leaderCommit
+      if(leaderCommit>mCommitIndex){
+        int lastIndex=mLog.getLastIndex();
+        mCommitIndex=leaderCommit<lastIndex?leaderCommit:lastIndex;
+      }            
+
+      
 
       return 0;
     }
