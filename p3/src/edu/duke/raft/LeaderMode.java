@@ -11,6 +11,7 @@ public class LeaderMode extends RaftMode {
   private int[] logIndexFollower;
   private boolean isDead = false;
 
+
   private void sendHeartBeat() {
     for(int i = 1; i <= mConfig.getNumServers(); i++) {
       if(i == mID) {
@@ -36,6 +37,7 @@ public class LeaderMode extends RaftMode {
     }
 
   }
+
   public void go() {
     synchronized (mLock) {
       System.out.println("S" + mID + "." + mConfig.getCurrentTerm() + ": switched to leader mode.");
@@ -66,6 +68,7 @@ public class LeaderMode extends RaftMode {
     synchronized (mLock) {
       int term = mConfig.getCurrentTerm();
       if (isDead) return term;
+
       int vote = term;
 
       if (candidateTerm > term) {
@@ -76,6 +79,7 @@ public class LeaderMode extends RaftMode {
         boolean ownLogIsMoreComplete = (mLog.getLastTerm() > lastLogTerm) || ((mLog.getLastTerm() == lastLogTerm) && (mLog.getLastIndex() > lastLogIndex));
         mConfig.setCurrentTerm(candidateTerm, !ownLogIsMoreComplete?candidateID:0);
         return !ownLogIsMoreComplete?0:term;
+
       }
 
       return vote;
@@ -101,6 +105,7 @@ public class LeaderMode extends RaftMode {
       int term = mConfig.getCurrentTerm();
       if (isDead) return term;
       int result = term;
+
       if (leaderTerm > term) {
         hbTimer.cancel();
 
@@ -121,6 +126,7 @@ public class LeaderMode extends RaftMode {
       }
 
       return result;
+
     }
   }
 
@@ -155,6 +161,7 @@ public class LeaderMode extends RaftMode {
           }
           // Send heartbeats to all servers
           sendEntries();
+
           hbTimer = scheduleTimer(HB_INTERVAL, HB_ID);
           break;
         default:

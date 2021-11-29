@@ -4,7 +4,9 @@ package edu.duke.raft;
 import java.util.Timer;
 // Random for setting random timeouts
 import java.util.concurrent.ThreadLocalRandom;
+
 import java.util.Arrays;
+
 
 /* NOTES
  * mConfig is the RaftConfig object available here. It contains not only all general configuration
@@ -123,6 +125,7 @@ public class FollowerMode extends RaftMode {
     synchronized (mLock) {
       timer.cancel();
       startTimer();
+
       int term = mConfig.getCurrentTerm ();
       int result = term;
 
@@ -168,6 +171,7 @@ public class FollowerMode extends RaftMode {
       }            
 
       
+
 
       return 0;
     }
