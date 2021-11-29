@@ -8,8 +8,8 @@ public class LeaderMode extends RaftMode {
   private static final int HB_ID = 3;
 
   private Timer hbTimer;
-  private int[] followerLogIndex;
-  private boolean mIsDead = false;
+  private int[] logIndexFollower;
+  private boolean isDead = false;
 
   private void sendHeartBeat() {
     for(int i = 1; i <= mConfig.getNumServers(); i++) {
@@ -20,19 +20,18 @@ public class LeaderMode extends RaftMode {
           mLog.getLastTerm(), new Entry[0], mCommitIndex);
     }
   }
-  private void send(){
+  private void sendEntries(){
      for(int i=1; i<=mConfig.getNumServers(); i++) {
         if(i != mID) {
-          int diff = mLog.getLastIndex() - followerLogIndex[i];
+          int diff = mLog.getLastIndex() - logIndexFollower[i];
           Entry[] entries = new Entry[diff];
           for(int j=0; j<diff; j++) {
-              entries[j] = mLog.getEntry(followerLogIndex[i] + j + 1);
+              entries[j] = mLog.getEntry(logIndexFollower[i] + j + 1);
           }
-          if(mLog.getEntry(followerLogIndex[i]) != null) {
-              remoteAppendEntries(i, mConfig.getCurrentTerm(), mID, followerLogIndex[i], mLog.getEntry(followerLogIndex[i]).term, entries, mCommitIndex);
-          } else { // if leader log is empty, mLog.getEntry(followerLogIndex[i]) is null, whose term does not exist, so send current term as term.
-              remoteAppendEntries(i, mConfig.getCurrentTerm(), mID, followerLogIndex[i], mConfig.getCurrentTerm(), entries, mCommitIndex);
-          }
+          // send current term as term if leader log is empty, mLog.getEntry(logIndexFollower[i]) is null
+            remoteAppendEntries(i, mConfig.getCurrentTerm(), mID, logIndexFollower[i], 
+              mLog.getEntry(logIndexFollower[i])!=null?mLog.getEntry(logIndexFollower[i]).term:mConfig.getCurrentTerm(), 
+              entries, mCommitIndex);
         }
     }
 
@@ -44,9 +43,9 @@ public class LeaderMode extends RaftMode {
       // Immediately send out the heartbeat to stop other elections (and others incrementing their term)
       sendHeartBeat();
 
-      followerLogIndex = new int[mConfig.getNumServers()+1];
+      logIndexFollower = new int[mConfig.getNumServers()+1];
       for(int n=0; n <= mConfig.getNumServers(); n++) {
-          followerLogIndex[n] = mLog.getLastIndex();
+        logIndexFollower[n] = mLog.getLastIndex();
       }
 
       // Initialize the heartbeat timer
@@ -66,7 +65,7 @@ public class LeaderMode extends RaftMode {
                          int lastLogTerm) {
     synchronized (mLock) {
       int term = mConfig.getCurrentTerm();
-      if (mIsDead) return term;
+      if (isDead) return term;
       int vote = term;
 
       if (candidateTerm > term) {
@@ -75,17 +74,8 @@ public class LeaderMode extends RaftMode {
         RaftServerImpl.setMode(new FollowerMode());
 
         boolean ownLogIsMoreComplete = (mLog.getLastTerm() > lastLogTerm) || ((mLog.getLastTerm() == lastLogTerm) && (mLog.getLastIndex() > lastLogIndex));
-
-        if(!ownLogIsMoreComplete) {
-          // Set that voted for the candidate
-          mConfig.setCurrentTerm(candidateTerm, candidateID);
-          return 0;
-        }
-        else {
-          // Did not vote for the candidate
-          mConfig.setCurrentTerm(candidateTerm, 0);
-          return term;
-        }
+        mConfig.setCurrentTerm(candidateTerm, !ownLogIsMoreComplete?candidateID:0);
+        return !ownLogIsMoreComplete?0:term;
       }
 
       return vote;
@@ -109,25 +99,35 @@ public class LeaderMode extends RaftMode {
                            int leaderCommit) {
     synchronized (mLock) {
       int term = mConfig.getCurrentTerm();
-      if (mIsDead) return term;
+      if (isDead) return term;
+      int result = term;
       if (leaderTerm > term) {
         hbTimer.cancel();
 
         RaftServerImpl.setMode(new FollowerMode());
 
-        // Update own term to stay up to date.
-        mConfig.setCurrentTerm(leaderTerm, 0);
 
+        mConfig.setCurrentTerm(leaderTerm, 0);
+        if (entries.length == 0) {
+          isDead = true;
+          RaftServerImpl.setMode(new FollowerMode());
+          return (prevLogIndex == mLog.getLastIndex() && prevLogTerm == mLog.getLastTerm())?0:leaderTerm;
+        }
+        if(mLog.insert(entries, prevLogIndex, prevLogTerm) != -1) {
+          result = 0;
+        } 
+        isDead = true;
+        RaftServerImpl.setMode(new FollowerMode());
       }
 
-      return term;
+      return result;
     }
   }
 
   // @param id of the timer that timed out
   public void handleTimeout(int timerID) {
     synchronized (mLock) {
-      if (mIsDead) return;
+      if (isDead) return;
         
       switch (timerID) {
         case HB_ID:
@@ -135,26 +135,26 @@ public class LeaderMode extends RaftMode {
           //update followerLogIndex
           int[] appendResponses = RaftResponses.getAppendResponses(mConfig.getCurrentTerm());
           if(appendResponses != null) { // if receives response, modify followerLogIndex
-          for(int i=1; i<appendResponses.length; i++) {
-            if(i != mID) {
-                if(appendResponses[i] != 0 && appendResponses[i] <= mConfig.getCurrentTerm()) {
-                    if(followerLogIndex[i] != -1) {
-                        followerLogIndex[i] -= 1;
+          for(int id=1; id<appendResponses.length; id++) {
+            if(id != mID) {
+                if(appendResponses[id] != 0 && appendResponses[id] <= mConfig.getCurrentTerm()) {
+                    if(logIndexFollower[id] != -1) {
+                      logIndexFollower[id] -= 1;
                     }
-                } else if (appendResponses[i] != 0 && appendResponses[i] > mConfig.getCurrentTerm()) {
+                } else if (appendResponses[id] != 0 && appendResponses[id] > mConfig.getCurrentTerm()) {
                     RaftResponses.clearAppendResponses(mConfig.getCurrentTerm());
-                    mConfig.setCurrentTerm(appendResponses[i], 0);
-                    mIsDead = true;
+                    mConfig.setCurrentTerm(appendResponses[id], 0);
+                    isDead = true;
                     RaftServerImpl.setMode(new FollowerMode());
                     return;
-                } else if(appendResponses[i] == 0) { // response is 0, update lastIndex
-                    followerLogIndex[i] = mLog.getLastIndex();
+                } else if(appendResponses[id] == 0) { // response is 0, update lastIndex
+                  logIndexFollower[id] = mLog.getLastIndex();
                 }
               }
             }
           }
           // Send heartbeats to all servers
-          send();
+          sendEntries();
           hbTimer = scheduleTimer(HB_INTERVAL, HB_ID);
           break;
         default:
