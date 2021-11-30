@@ -41,18 +41,19 @@ public class LeaderMode extends RaftMode {
   public void receive(String item) {
     synchronized (mLock) {
       int term = mConfig.getCurrentTerm();
-      int idx = mLog.getLastIndex() + 1;
-      System.out.println("S"+mID + "." + mConfig.getCurrentTerm() + ": Received item " + item + ", label it as " + idx);
-      Entry[] ets = {new Entry(idx, term)};
-      mLog.append(ets);
+      String[] splitted = item.replaceAll("Client ", "").replaceAll(" Item ", "").split(":");
+      int storage = Integer.parseInt(splitted[0]) * 10000 + Integer.parseInt(splitted[1]);
+      System.out.println("S"+mID + "." + mConfig.getCurrentTerm() + ": Received item " + item);
+      Entry[] ets = {new Entry(storage, term)};
       
-      logIndexFollower = new int[mConfig.getNumServers() + 1];
-
-      for (int n = 0; n <= mConfig.getNumServers(); n++) {
-        logIndexFollower[n] = mLog.getLastIndex();
+      for (int i = 1; i <= mConfig.getNumServers(); i++) {
+        if (i != mID) {
+          remoteAppendEntries(i, mConfig.getCurrentTerm(), mID, mLog.getLastIndex(), 
+            mConfig.getCurrentTerm(),ets, mCommitIndex);
+        }
       }
-
-      sendEntries();
+      mLog.append(ets);
+      mCommitIndex += 1;
     }
   }
 

@@ -31,9 +31,17 @@ public class RaftServerImpl extends UnicastRemoteObject
     }
   }
 
-  public RaftMode getMode() throws RemoteException {
+  public String getMode() throws RemoteException {
     synchronized(mLock) {
-      return mMode;
+      if (mMode instanceof LeaderMode) {
+        return "Leader";
+      } else if (mMode instanceof CandidateMode) {
+        return "Candidate";
+      } else if (mMode instanceof FollowerMode) {
+        return "Follower";
+      } else {
+        return "None";
+      }
     }
   }
 

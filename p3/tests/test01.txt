@@ -1,4 +1,4 @@
-NUM_SERVERS=2
+NUM_SERVERS=3
 
 start_client 1
 

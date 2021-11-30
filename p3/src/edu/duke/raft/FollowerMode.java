@@ -116,14 +116,23 @@ public class FollowerMode extends RaftMode {
   public void receive(String item) {
     synchronized(mLock) {
       int term = mConfig.getCurrentTerm();
-      int idx = mLog.getLastIndex();
-      System.out.println("S"+mID + '.' + mConfig.getCurrentTerm() + ": Received item " + item + ", label it as " + idx);
+      System.out.println("S"+mID + '.' + mConfig.getCurrentTerm() + ": Received item " + item);
       for (int i=1; i<=mConfig.getNumServers(); i++) {
         if (i != mID) {
           try {
             String url = this.getRmiUrl(i);
+            // System.out.println("    Trying URL "+ url + " in FollowerMode");
             RaftServer server = (RaftServer) Naming.lookup(url);
-            boolean condition = server.getMode().getClass() == LeaderMode.class && server.getLastTerm() >= this.mLog.getLastTerm();
+            // System.out.println("    Server with url " + url + " found in FollowerMode");
+            // System.out.println("    Start boolean test in FollowerMode");
+            // System.out.println("        Condition 1");
+            // boolean cond1 = server.getMode().equals("Leader");
+            // System.out.println("        Condition 2");
+            // boolean cond2 = server.getLastTerm() >= this.mLog.getLastTerm();
+            // System.out.println("        Full Condition");
+            boolean condition = server.getMode().equals("Leader") && server.getLastTerm() >= this.mLog.getLastTerm();
+            // System.out.println("    Boolean test finish in FollowerMode");
+            // System.out.println("S"+server.getMID()+ " with condition " + condition);
             if (condition) {
               System.out.println("S"+mID+"." + mConfig.getCurrentTerm() + ": Forward log to S"+server.getMID());
               server.receive(item);

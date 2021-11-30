@@ -224,7 +224,10 @@ public abstract class RaftMode {
 				    "response " + response + ", " + 
 				    "requestTerm " + leaderTerm + ", " +
 				    "requestRound " + mRound +
-				    ") failed.");
+				    ") failed with Entries:");
+					for (Entry i: entries) {
+						System.err.println("    " + i.toString());
+					}
 	      }
 	    }
 	  } catch (MalformedURLException me) {

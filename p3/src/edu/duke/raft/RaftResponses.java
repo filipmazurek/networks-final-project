@@ -116,7 +116,9 @@ public class RaftResponses {
     if ((requestTerm == mTerm) && (requestRound == mRounds[serverID])) {
       mAppendResponses[serverID] = response;
       return true;      
-    } 
+    } else {
+      System.err.println(requestTerm + ", " + mTerm + ", " + requestRound + ", " + mRounds[serverID]); 
+    }
     return false;
   }
 

@@ -114,8 +114,7 @@ public class CandidateMode extends RaftMode {
   public void receive(String item) {
     synchronized (mLock) {
       int term = mConfig.getCurrentTerm();
-      int idx = mLog.getLastIndex();
-      System.out.println("S"+mID + '.' + mConfig.getCurrentTerm() + ": Received item " + item + ", label it as " + idx);
+      System.out.println("S"+mID + '.' + mConfig.getCurrentTerm() + ": Received item " + item);
       System.out.println("Dropping the item");
     }
   }
