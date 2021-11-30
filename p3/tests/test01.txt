@@ -4,4 +4,19 @@ start_client 1
 
 start_servers $NUM_SERVERS
 
+sleep 1
+
+pause_server 3
+
+sleep 1
+
+resume_server 3
+
+sleep 1
+
+fail_server 2
+
+sleep 1
+
+restart_server 2
 

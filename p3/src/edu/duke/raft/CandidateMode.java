@@ -115,7 +115,10 @@ public class CandidateMode extends RaftMode {
     synchronized (mLock) {
       int term = mConfig.getCurrentTerm();
       System.out.println("S"+mID + '.' + mConfig.getCurrentTerm() + ": Received item " + item);
-      System.out.println("Dropping the item");
+      String[] splitted = item.replaceAll("Client ", "").replaceAll(" Item ", "").split(":");
+      int storage = Integer.parseInt(splitted[0]) * 10000 + Integer.parseInt(splitted[1]);
+      Entry[] ets = {new Entry(storage, term)};
+      mLog.append(ets);
     }
   }
 

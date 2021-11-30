@@ -117,6 +117,11 @@ public class FollowerMode extends RaftMode {
     synchronized(mLock) {
       int term = mConfig.getCurrentTerm();
       System.out.println("S"+mID + '.' + mConfig.getCurrentTerm() + ": Received item " + item);
+      String[] splitted = item.replaceAll("Client ", "").replaceAll(" Item ", "").split(":");
+      int storage = Integer.parseInt(splitted[0]) * 10000 + Integer.parseInt(splitted[1]);
+      Entry[] ets = {new Entry(storage, term)};
+      mLog.append(ets);
+      
       for (int i=1; i<=mConfig.getNumServers(); i++) {
         if (i != mID) {
           try {
