@@ -9,6 +9,7 @@ public class Entry implements Serializable {
 
   public int action;
   public int term;
+  public String content = null;
 
   // @param entry's action
   // @param entry's term

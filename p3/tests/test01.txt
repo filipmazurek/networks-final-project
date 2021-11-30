@@ -1,0 +1,7 @@
+NUM_SERVERS=2
+
+start_client 1
+
+start_servers $NUM_SERVERS
+
+

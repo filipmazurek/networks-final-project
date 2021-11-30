@@ -21,6 +21,7 @@ public class LeaderMode extends RaftMode {
           mLog.getLastTerm(), new Entry[0], mCommitIndex);
     }
   }
+
   private void sendEntries(){
      for(int i=1; i<=mConfig.getNumServers(); i++) {
         if(i != mID) {
@@ -35,7 +36,24 @@ public class LeaderMode extends RaftMode {
               entries, mCommitIndex);
         }
     }
+  }
 
+  public void receive(String item) {
+    synchronized (mLock) {
+      int term = mConfig.getCurrentTerm();
+      int idx = mLog.getLastIndex() + 1;
+      System.out.println("S"+mID + "." + mConfig.getCurrentTerm() + ": Received item " + item + ", label it as " + idx);
+      Entry[] ets = {new Entry(idx, term)};
+      mLog.append(ets);
+      
+      logIndexFollower = new int[mConfig.getNumServers() + 1];
+
+      for (int n = 0; n <= mConfig.getNumServers(); n++) {
+        logIndexFollower[n] = mLog.getLastIndex();
+      }
+
+      sendEntries();
+    }
   }
 
   public void go() {

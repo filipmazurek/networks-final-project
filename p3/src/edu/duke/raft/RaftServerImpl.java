@@ -7,9 +7,9 @@ import java.rmi.server.UnicastRemoteObject;
 public class RaftServerImpl extends UnicastRemoteObject 
   implements RaftServer {
 
-  private static int mID;
-  private static RaftMode mMode;
-  private static Object mLock;
+  public static int mID;
+  public static RaftMode mMode;
+  public static Object mLock;
   
   // @param server's unique id
   public RaftServerImpl (int serverID) throws RemoteException {
@@ -28,6 +28,24 @@ public class RaftServerImpl extends UnicastRemoteObject
 	mMode = mode;
 	mode.go ();    
       }
+    }
+  }
+
+  public RaftMode getMode() throws RemoteException {
+    synchronized(mLock) {
+      return mMode;
+    }
+  }
+
+  public int getLastTerm() throws RemoteException {
+    synchronized(mLock) {
+      return mMode.mLog.getLastTerm();
+    }
+  }
+
+  public int getMID() throws RemoteException {
+    synchronized(mLock) {
+      return mID;
     }
   }
   
@@ -66,6 +84,12 @@ public class RaftServerImpl extends UnicastRemoteObject
 				  prevLogTerm,
 				  entries,
 				  leaderCommit);
+    }
+  }
+
+  public void receive(String item) throws RemoteException{
+    synchronized(mLock) {
+      mMode.receive(item);
     }
   }
 

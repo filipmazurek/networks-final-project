@@ -26,4 +26,11 @@ public interface RaftServer extends Remote {
 			    Entry[] entries,
 			    int leaderCommit) 
     throws RemoteException;
+
+  public RaftMode getMode() throws RemoteException;
+  public int getLastTerm() throws RemoteException;
+  public int getMID() throws RemoteException;
+
+  // currently don't indicate if the commit is successful
+  public void receive(String item) throws RemoteException;
 }

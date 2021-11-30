@@ -6,6 +6,11 @@ import java.util.Timer;
 import java.util.concurrent.ThreadLocalRandom;
 
 import java.util.Arrays;
+import java.rmi.Naming;
+import java.rmi.NotBoundException;
+import java.rmi.RemoteException;
+import java.net.MalformedURLException;
+import java.rmi.server.UnicastRemoteObject;
 
 
 /* NOTES
@@ -105,6 +110,31 @@ public class FollowerMode extends RaftMode {
       // Own term is higher than the candidate's, deny vote
       return term;
 
+    }
+  }
+
+  public void receive(String item) {
+    synchronized(mLock) {
+      int term = mConfig.getCurrentTerm();
+      int idx = mLog.getLastIndex();
+      System.out.println("S"+mID + '.' + mConfig.getCurrentTerm() + ": Received item " + item + ", label it as " + idx);
+      for (int i=1; i<=mConfig.getNumServers(); i++) {
+        if (i != mID) {
+          try {
+            String url = this.getRmiUrl(i);
+            RaftServer server = (RaftServer) Naming.lookup(url);
+            boolean condition = server.getMode().getClass() == LeaderMode.class && server.getLastTerm() >= this.mLog.getLastTerm();
+            if (condition) {
+              System.out.println("S"+mID+"." + mConfig.getCurrentTerm() + ": Forward log to S"+server.getMID());
+              server.receive(item);
+              break;
+            }
+          } catch (Exception e) {
+            System.out.println(e.toString());
+            break;
+          }
+        }
+      }
     }
   }
 

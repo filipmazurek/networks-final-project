@@ -11,6 +11,9 @@ fi
 OUTPUT_FILE="$SCRIPT_DIR/../serverlogs/server.output"
 echo "Writing simulation output to $OUTPUT_FILE"
 
+CLIENT_OUTPUT="$SCRIPT_DIR/../clientlogs/client.output"
+echo "Writing client simulation to $CLIENT_OUTPUT"
+
 TIME_TO_SIMULATE="$1"
 echo "Simulation will last $TIME_TO_SIMULATE seconds"
 echo "TIME_TO_SIMULATE=$TIME_TO_SIMULATE" >> "$OUTPUT_FILE"
@@ -24,6 +27,9 @@ LOG_DIR="$SCRIPT_DIR/../serverlogs"
 echo "Reading log files from $LOG_DIR"
 CONFIG_DIR="$SCRIPT_DIR/../serverlogs"
 echo "Reading config file from $CONFIG_DIR"
+
+CLIENT_CONFIG="$SCRIPT_DIR/../clientlogs"
+echo "Reading client files from $CLIENT_CONFIG"
 
 echo "Restarting rmiregistry"
 PIDOF="$SCRIPT_DIR/pidof"
@@ -51,6 +57,11 @@ function restart_server {
 	SERVER_PIDS[$id]="$PID"
 	echo "Started server S$id"
     fi
+}
+
+function start_client {
+    id=$1
+    java -classpath "$SCRIPT_DIR" edu.duke.raft.StartClient "$id" "$CLIENT_CONFIG/$id.op" >> "$CLIENT_OUTPUT" &
 }
 
 function start_servers {

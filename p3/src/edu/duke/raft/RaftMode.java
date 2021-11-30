@@ -70,7 +70,7 @@ public abstract class RaftMode {
     return timer;
   }
 
-  private final String getRmiUrl (int serverID) {
+  protected final String getRmiUrl (int serverID) {
     return "rmi://localhost:" + mRmiPort + "/S" + serverID;
   }
 
@@ -88,6 +88,8 @@ public abstract class RaftMode {
 			" failed.");
 */
   }
+
+  public abstract void receive(String item);
   
   
   // called to make request vote RPC on another server

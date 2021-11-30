@@ -172,6 +172,9 @@ public class RaftLog {
 
     // @return term of last entry in log
     public int getLastTerm () {
+      if (mEntries.size() == 0) {
+        return -1;
+      }
       Entry entry = mEntries.getLast ();
       if (entry != null) {
 	return entry.term;

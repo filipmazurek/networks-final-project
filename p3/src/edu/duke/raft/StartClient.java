@@ -24,16 +24,17 @@ public class StartClient {
 
     int id = Integer.parseInt (args[0]);
     String ops = args[1];
+    Path cp = FileSystems.getDefault().getPath(ops);
     
     String url = "rmi://localhost:" + "/C" + id;
     System.out.println ("Testing C" + id);
     System.out.println ("Contacting server via rmiregistry " + url);
 
-    RaftClientImpl client = new RaftClientImpl(id);
-
     try {
+      RaftClientImpl client = new RaftClientImpl(id);
+
       System.out.println("Client " + id + " reading operations from path " + ops);
-      List<String> lines = Files.readAllLines(ops, StandardCharsets.US_ASCII);
+      List<String> lines = Files.readAllLines(cp, StandardCharsets.US_ASCII);
       for (String line: lines) {
         /*
         Line := <Operation>:<ArgList>
@@ -46,22 +47,29 @@ public class StartClient {
         if ((tokens != null) && tokens.length == 2) {
           String operation = tokens[0];
           String value = tokens[1];
+          System.out.println("Executing command " + line);
           switch(operation) {
             case "SLEEP":
+              System.out.println("SLEEP " + value);
               Thread.sleep(Integer.parseInt(value));
               break;
             case "SEND":
               String[] arguments = value.split(",");
               client.writeEntry(Integer.parseInt(arguments[0]), Integer.parseInt(arguments[1]));
-              break
+              // System.out.println("SEND " + arguments[0] + " " + arguments[1]);
+              break;
             default: 
               throw new RuntimeException("Unexpected operation " + operation);
           }
         }
       }
-    } catch (Exception e) {
+      System.out.println("Client " + id + " Completed all commands.");
+      System.exit(0);
+    } catch (IOException ioe) {
+      System.out.println(ioe);
+    }
+    catch (Exception e) {
       System.out.println(e);
-      throw e;
     }
   }
 }

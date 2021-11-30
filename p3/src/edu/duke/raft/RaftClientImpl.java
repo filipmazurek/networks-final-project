@@ -4,6 +4,7 @@ import java.rmi.Naming;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.net.MalformedURLException;
+import java.rmi.server.UnicastRemoteObject;
 
 public class RaftClientImpl extends UnicastRemoteObject {
     private int mID;
@@ -21,19 +22,23 @@ public class RaftClientImpl extends UnicastRemoteObject {
     public void writeEntry(int serverID, int serverPort) {
         String item = "Client " + this.mID + ": Item " + this.counter;
         this.counter ++;
+        RaftClientImpl that = this;
 
         (new Thread(new Runnable() {
             public void run() {
-                String url = this.getRmiUrl(serverID, serverPort);
+                String url = that.getRmiUrl(serverID, serverPort);
                 try {
                     RaftServer server = (RaftServer) Naming.lookup(url);
                     server.receive(item);
                 } catch (NotBoundException nbe) {
                     System.out.println("NotBoundException in writeEntry("+item+")");
-                    throw nbe;
+                    throw new RuntimeException(nbe.toString());
                 } catch (RemoteException re) {
                     System.out.println("RemoteException in writeEntry(" + item + ")");
-                    throw re;
+                    throw new RuntimeException(re.toString());
+                } catch (MalformedURLException murle) {
+                    System.out.println("MalformedURLException in writeEntry(" + item + ")");
+                    throw new RuntimeException(murle.toString());
                 }
             }
         })).start();

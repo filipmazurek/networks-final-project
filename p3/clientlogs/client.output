@@ -1,0 +1,18 @@
+Testing C1
+Contacting server via rmiregistry rmi://localhost:/C1
+Client 1 reading operations from path /Users/elnifio/Documents/GitHub/networks-final-project/p3/bin/../clientlogs/1.op
+Executing command SLEEP:1000
+SLEEP 1000
+Executing command SEND:1,1098
+Executing command SLEEP:1000
+SLEEP 1000
+Executing command SEND:1,1098
+Executing command SLEEP:1000
+SLEEP 1000
+Executing command SEND:2,1098
+Executing command SLEEP:1000
+SLEEP 1000
+Executing command SEND:1,1098
+Executing command SLEEP:1000
+SLEEP 1000
+Client 1 Completed all commands.
